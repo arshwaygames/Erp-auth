@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Yönlendirmesi</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #1e1e24; color: #fff; margin: 0; }
+        .container { background: #2b2b36; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; width: 100%; max-width: 350px; }
+        h2 { margin-top: 0; color: #00d2ff; }
+        input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; background: #1e1e24; color: #fff; }
+        button { width: 100%; padding: 12px; background: #00d2ff; color: #1e1e24; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #00a8cc; }
+        #message { margin-top: 15px; font-weight: bold; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 id="title">İşlem Yapılıyor...</h2>
+    <p id="description">Lütfen bekleyin.</p>
+    
+    <!-- Sadece Şifre Sıfırlama durumunda görünür olacak form -->
+    <form id="resetForm" class="hidden">
+        <input type="password" id="newPassword" placeholder="Yeni Şifreniz (En az 6 karakter)" required minlength="6">
+        <button type="submit">Şifreyi Kaydet</button>
+    </form>
+    
+    <div id="message"></div>
+</div>
+
+<script>
+    // --- SUPABASE BİLGİLERİNİ BURAYA GİR ---
+    const SUPABASE_URL = 'https://SENIN-PROJE-ID.supabase.co';
+    const SUPABASE_ANON_KEY = 'SENIN-ANON-KEY-BILGIN';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Linkten gelen veriyi (hash) okuma
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.substring(1));
+    const type = params.get("type"); // recovery, signup, email_change vs.
+
+    const titleEl = document.getElementById("title");
+    const descEl = document.getElementById("description");
+    const formEl = document.getElementById("resetForm");
+    const messageEl = document.getElementById("message");
+
+    if (type === "signup") {
+        titleEl.textContent = "Hesabınız Onaylandı!";
+        descEl.textContent = "E-posta adresiniz doğrulandı. Artık uygulamaya geri dönerek giriş yapabilirsiniz.";
+        titleEl.style.color = "#00ff88";
+    } 
+    else if (type === "email_change") {
+        titleEl.textContent = "E-Posta Güncellendi!";
+        descEl.textContent = "Yeni e-posta adresiniz başarıyla onaylandı. Uygulamaya dönebilirsiniz.";
+        titleEl.style.color = "#00ff88";
+    }
+    else if (type === "recovery") {
+        titleEl.textContent = "Şifre Sıfırlama";
+        descEl.textContent = "Lütfen yeni şifrenizi belirleyin.";
+        formEl.classList.remove("hidden"); // Formu göster
+
+        formEl.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const newPassword = document.getElementById("newPassword").value;
+            messageEl.textContent = "Güncelleniyor...";
+            messageEl.style.color = "yellow";
+
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+            if (error) {
+                messageEl.textContent = "Hata: " + error.message;
+                messageEl.style.color = "red";
+            } else {
+                messageEl.textContent = "Şifreniz başarıyla güncellendi! Uygulamaya dönebilirsiniz.";
+                messageEl.style.color = "#00ff88";
+                formEl.classList.add("hidden");
+            }
+        });
+    } 
+    else {
+        titleEl.textContent = "Geçersiz İstek";
+        descEl.textContent = "Bu bağlantı geçersiz veya süresi dolmuş olabilir.";
+        titleEl.style.color = "red";
+    }
+</script>
+</body>
+</html>
