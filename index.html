@@ -1,90 +1,115 @@
-<!DOCTYPE html>
+hayır şimdi sadece tam kod bu mu <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Yönlendirmesi</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #1e1e24; color: #fff; margin: 0; }
-        .container { background: #2b2b36; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; width: 100%; max-width: 350px; }
-        h2 { margin-top: 0; color: #00d2ff; }
-        input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; background: #1e1e24; color: #fff; }
-        button { width: 100%; padding: 12px; background: #00d2ff; color: #1e1e24; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
-        button:hover { background: #00a8cc; }
-        #message { margin-top: 15px; font-weight: bold; }
-        .hidden { display: none; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Yönlendirmesi</title>
+    <!-- Supabase'in doğrudan tarayıcı (UMD) versiyonunu çağırıyoruz -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #1e1e24; color: #fff; margin: 0; }
+        .container { background: #2b2b36; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; width: 100%; max-width: 350px; }
+        h2 { margin-top: 0; color: #00d2ff; }
+        input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #444; border-radius: 6px; box-sizing: border-box; background: #1e1e24; color: #fff; }
+        button { width: 100%; padding: 12px; background: #00d2ff; color: #1e1e24; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #00a8cc; }
+        #message { margin-top: 15px; font-weight: bold; }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 id="title">İşlem Yapılıyor...</h2>
-    <p id="description">Lütfen bekleyin.</p>
-    
-    <!-- Sadece Şifre Sıfırlama durumunda görünür olacak form -->
-    <form id="resetForm" class="hidden">
-        <input type="password" id="newPassword" placeholder="Yeni Şifreniz (En az 6 karakter)" required minlength="6">
-        <button type="submit">Şifreyi Kaydet</button>
-    </form>
-    
-    <div id="message"></div>
+    <h2 id="title">İşlem Yapılıyor...</h2>
+    <p id="description">Lütfen bekleyin.</p>
+    
+    <!-- Sadece Şifre Sıfırlama durumunda görünür olacak form -->
+    <form id="resetForm" class="hidden">
+        <input type="password" id="newPassword" placeholder="Yeni Şifreniz (En az 6 karakter)" required minlength="6">
+        <button type="submit">Şifreyi Kaydet</button>
+    </form>
+    
+    <div id="message"></div>
 </div>
 
 <script>
-    // --- SUPABASE BİLGİLERİNİ BURAYA GİR ---
-    const SUPABASE_URL = 'https://lkkpebcnnsiuixzovxif.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxra3BlYmNubnNpdWl4em92eGlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1Mzg5NjMsImV4cCI6MjEwMDExNDk2M30.BHhOZUdR6isAyr2avDo52_Ohhxe43IdSAkaXKDU2fjU';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // 1. URL PARAMETRELERİNİ GÜVENLİ ŞEKİLDE AL
+    const hash = window.location.hash;
+    const search = window.location.search;
+    
+    let params;
+    // Bazen Supabase linkleri ? ile, bazen # ile gönderir. İkisini de kapsıyoruz.
+    if (hash) {
+        params = new URLSearchParams(hash.substring(1));
+    } else if (search) {
+        params = new URLSearchParams(search);
+    } else {
+        params = new URLSearchParams();
+    }
 
-    // Linkten gelen veriyi (hash) okuma
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.substring(1));
-    const type = params.get("type"); // recovery, signup, email_change vs.
+    const type = params.get("type"); 
 
-    const titleEl = document.getElementById("title");
-    const descEl = document.getElementById("description");
-    const formEl = document.getElementById("resetForm");
-    const messageEl = document.getElementById("message");
+    const titleEl = document.getElementById("title");
+    const descEl = document.getElementById("description");
+    const formEl = document.getElementById("resetForm");
+    const messageEl = document.getElementById("message");
 
-    if (type === "signup") {
-        titleEl.textContent = "Hesabınız Onaylandı!";
-        descEl.textContent = "E-posta adresiniz doğrulandı. Artık uygulamaya geri dönerek giriş yapabilirsiniz.";
-        titleEl.style.color = "#00ff88";
-    } 
-    else if (type === "email_change") {
-        titleEl.textContent = "E-Posta Güncellendi!";
-        descEl.textContent = "Yeni e-posta adresiniz başarıyla onaylandı. Uygulamaya dönebilirsiniz.";
-        titleEl.style.color = "#00ff88";
-    }
-    else if (type === "recovery") {
-        titleEl.textContent = "Şifre Sıfırlama";
-        descEl.textContent = "Lütfen yeni şifrenizi belirleyin.";
-        formEl.classList.remove("hidden"); // Formu göster
+    // 2. SUPABASE'İ GÜVENLİ BAŞLAT (Hata verirse UI güncellemelerini engellemez)
+    let supabaseClient;
+    try {
+        const SUPABASE_URL = 'https://lkkpebcnnsiuixzovxif.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxra3BlYmNubnNpdWl4em92eGlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1Mzg5NjMsImV4cCI6MjEwMDExNDk2M30.BHhOZUdR6isAyr2avDo52_Ohhxe43IdSAkaXKDU2fjU';
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (error) {
+        console.error("Supabase başlatılamadı:", error);
+    }
 
-        formEl.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const newPassword = document.getElementById("newPassword").value;
-            messageEl.textContent = "Güncelleniyor...";
-            messageEl.style.color = "yellow";
+    // 3. UI KONTROLLERİ VE GÜNCELLEMELERİ
+    if (type === "signup") {
+        titleEl.textContent = "Hesabınız Onaylandı!";
+        descEl.textContent = "E-posta adresiniz doğrulandı. Artık uygulamaya geri dönerek giriş yapabilirsiniz.";
+        titleEl.style.color = "#00ff88";
+    } 
+    else if (type === "email_change") {
+        titleEl.textContent = "E-Posta Güncellendi!";
+        descEl.textContent = "Yeni e-posta adresiniz başarıyla onaylandı. Uygulamaya dönebilirsiniz.";
+        titleEl.style.color = "#00ff88";
+    }
+    else if (type === "recovery") {
+        titleEl.textContent = "Şifre Sıfırlama";
+        descEl.textContent = "Lütfen yeni şifrenizi belirleyin.";
+        formEl.classList.remove("hidden"); // Formu göster
 
-            const { error } = await supabase.auth.updateUser({ password: newPassword });
+        formEl.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const newPassword = document.getElementById("newPassword").value;
+            messageEl.textContent = "Güncelleniyor...";
+            messageEl.style.color = "yellow";
 
-            if (error) {
-                messageEl.textContent = "Hata: " + error.message;
-                messageEl.style.color = "red";
-            } else {
-                messageEl.textContent = "Şifreniz başarıyla güncellendi! Uygulamaya dönebilirsiniz.";
-                messageEl.style.color = "#00ff88";
-                formEl.classList.add("hidden");
-            }
-        });
-    } 
-    else {
-        titleEl.textContent = "Geçersiz İstek";
-        descEl.textContent = "Bu bağlantı geçersiz veya süresi dolmuş olabilir.";
-        titleEl.style.color = "red";
-    }
+            if (!supabaseClient) {
+                messageEl.textContent = "Sistem bağlantı hatası. Lütfen sayfayı yenileyin.";
+                messageEl.style.color = "red";
+                return;
+            }
+
+            const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+
+            if (error) {
+                messageEl.textContent = "Hata: " + error.message;
+                messageEl.style.color = "red";
+            } else {
+                messageEl.textContent = "Şifreniz başarıyla güncellendi! Uygulamaya dönebilirsiniz.";
+                messageEl.style.color = "#00ff88";
+                formEl.classList.add("hidden");
+            }
+        });
+    } 
+    else {
+        // Parametre yoksa veya geçersizse
+        titleEl.textContent = "Geçersiz İstek";
+        descEl.textContent = "Bu bağlantı geçersiz veya süresi dolmuş olabilir. (Type bulunamadı)";
+        titleEl.style.color = "red";
+    }
 </script>
 </body>
-</html>
+</html> yani eksiksiz halimi bu
